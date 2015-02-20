@@ -50,7 +50,7 @@ use strict;
 use warnings;
 use Scalar::Util qw/refaddr/;
 
-our $VERSION = '1.014';
+our $VERSION = '1.015';
 
 BEGIN { __PACKAGE__->mk_accessors(qw/user store/) }
 
@@ -140,16 +140,7 @@ bind, 0 on failure.
 
 sub check_password {
     my ( $self, $password ) = @_;
-    my $ldap
-        = $self->store->ldap_bind( undef, $self->ldap_entry->dn, $password,
-        'forauth' );
-    if ( defined($ldap) ) {
-        if ($self->store->role_search_as_user) {
-            # FIXME - This can be removed and made to use the code below..
-            # Have to do the role lookup _now_, as this is the only time
-            # that we have the user's password/ldap bind..
-            $self->roles($ldap);
-        }
+    if ( $self->store->ldap_auth($self->ldap_entry->dn, $password) ) {
         # Stash a closure which can be used to retrieve the connection in the users context later.
         $_ldap_connection_passwords{refaddr($self)} = $password;
         return 1;
@@ -167,8 +158,7 @@ Returns the results of L<Catalyst::Authentication::Store::LDAP::Backend>'s "look
 
 sub roles {
     my $self = shift;
-    my $ldap = shift;
-    $self->{_roles} ||= [$self->store->lookup_roles($self, $ldap)];
+    $self->{_roles} ||= [$self->store->lookup_roles($self)];
     return @{$self->{_roles}};
 }
 

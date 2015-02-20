@@ -36,4 +36,3 @@ ok( my $user_mixed = $back->find_user( { username => 'SOmeBOdy' } ), "find_user 
 isa_ok( $user_mixed, "Catalyst::Authentication::Store::LDAP::User" );
 
 done_testing;
-
