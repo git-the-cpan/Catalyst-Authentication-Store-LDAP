@@ -38,8 +38,12 @@ SYNOPSIS
                    user_field          => "uid",
                    user_filter         => "(&(objectClass=posixAccount)(uid=%s))",
                    user_scope          => "one", # or "sub" for Active Directory
-                   user_search_options => { deref => "always" },
+                   user_search_options => {
+                     deref => 'always',
+                     attrs => [qw( distinguishedname name mail )],
+                   },
                    user_results_filter => sub { return shift->pop_entry },
+                   persist_in_session  => 'all',
                  },
                },
              },
@@ -50,8 +54,8 @@ SYNOPSIS
             my ( $self, $c ) = @_;
 
             $c->authenticate({
-                              id          => $c->req->param("login"), 
-                              password    => $c->req->param("password") 
+                              id          => $c->req->param("login"),
+                              password    => $c->req->param("password")
                              });
             $c->res->body("Welcome " . $c->user->username . "!");
         }
@@ -131,7 +135,7 @@ CONFIGURATION OPTIONS
 
         user_basedn: ou=Domain Users,ou=Accounts,dc=mycompany,dc=com
         user_field:  samaccountname
-        user_filter: (sAMAccountName=%s) 
+        user_filter: (sAMAccountName=%s)
         user_scope: sub
 
     He also notes: "I found the case in the value of user_field to be
@@ -270,6 +274,22 @@ CONFIGURATION OPTIONS
     *bindpw* fields. If this is set to false, then the role search will
     instead be performed when bound as the user you authenticated as.
 
+  persist_in_session
+    Can take one of the following values, defaults to "username":
+
+    "username"
+        Only store the username in the session and lookup the user and its
+        roles on every request. That was how the module worked until version
+        1.015 and is also the default for backwards compatibility.
+
+    "all"
+        Store the user object and its roles in the session and never look it
+        up in the store after login.
+
+        NOTE: It's recommended to limit the user attributes fetched from
+        LDAP using user_search_options / attrs to not exhaust the session
+        store.
+
   entry_class
     The name of the class of LDAP entries returned. This class should exist
     and is expected to be a subclass of Net::LDAP::Entry
@@ -284,12 +304,13 @@ METHODS
     Catalyst::Plugin::Authentication with this object.
 
 AUTHORS
-    Adam Jacob <holoway@cpan.org>
+    Adam Jacob <holoway@cpan.org> Peter Karman <karman@cpan.org> Alexander
+    Hartmaier <abraxxa@cpan.org>
 
     Some parts stolen shamelessly and entirely from
     Catalyst::Plugin::Authentication::Store::Htpasswd.
 
-    Currently maintained by Peter Karman <karman@cpan.org>.
+    Currently maintained by Dagfinn Ilmari Mannsåker <ilmari@cpan.org>.
 
 THANKS
     To nothingmuch, ghenry, castaway and the rest of #catalyst for the help.

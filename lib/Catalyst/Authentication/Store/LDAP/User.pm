@@ -4,7 +4,7 @@
 =head1 NAME
 
 Catalyst::Authentication::Store::LDAP::User
- - A User object representing an LDAP object. 
+ - A User object representing an LDAP object.
 
 =head1 SYNOPSIS
 
@@ -28,10 +28,10 @@ username.
 This wraps up an LDAP object and presents a simplified interface to it's
 contents.  It uses some AUTOLOAD magic to pass method calls it doesn't
 understand through as simple read only accessors for the LDAP entries
-various attributes.  
+various attributes.
 
 It gets grumpy if you ask for an attribute via the AUTOLOAD mechanism
-that it doesn't know about.  Avoid that with using "has_attribute", 
+that it doesn't know about.  Avoid that with using "has_attribute",
 discussed in more detail below.
 
 You can skip all that and just go straight to the L<Net::LDAP::Entry>
@@ -49,8 +49,9 @@ use base qw( Catalyst::Authentication::User Class::Accessor::Fast );
 use strict;
 use warnings;
 use Scalar::Util qw/refaddr/;
+use Net::LDAP::Entry;
 
-our $VERSION = '1.015';
+our $VERSION = '1.016';
 
 BEGIN { __PACKAGE__->mk_accessors(qw/user store/) }
 
@@ -74,11 +75,11 @@ Returns a L<Catalyst::Authentication::Store::LDAP::User> object.
 =cut
 
 sub new {
-    my ( $class, $store, $user, $c ) = @_;
+    my ( $class, $store, $user, $c, $roles ) = @_;
 
     return unless $user;
 
-    bless { store => $store, user => $user, }, $class;
+    bless { store => $store, user => $user, _roles => $roles }, $class;
 }
 
 =head2 id
@@ -164,18 +165,34 @@ sub roles {
 
 =head2 for_session
 
-Returns the User object, stringified.
+Returns the user for persistence in the session depending on the
+persist_in_session config option.
+
+Stores the persist_in_session setting so it can be used to revive the user
+even if the setting has been changed.
 
 =cut
 
 sub for_session {
     my $self = shift;
+
+    if ( $self->store->persist_in_session eq 'all' ) {
+        # use the roles accessor to ensure the roles are fetched
+        return {
+            # store the persistance setting in the session to know how to
+            # restore the user
+            persist_in_session  => $self->store->persist_in_session,
+            user                => $self->user,
+            _roles              => [ $self->roles ],
+        };
+    }
+
     return $self->stringify;
 }
 
 =head2 ldap_entry
 
-Returns the raw ldap_entry. 
+Returns the raw ldap_entry.
 
 =cut
 
@@ -205,7 +222,7 @@ sub attributes {
 =head2 has_attribute
 
 Returns the values for an attribute, or undef if that attribute is not present.
-The safest way to get at an attribute. 
+The safest way to get at an attribute.
 
 =cut
 
@@ -287,12 +304,12 @@ You can call:
     $c->user->homedirectory
 
 And you'll get the value of the "homeDirectory" attribute.  Note that
-all the AUTOLOADed methods are automatically lower-cased. 
+all the AUTOLOADed methods are automatically lower-cased.
 
 =head2 Special Keywords
 
 The highly useful and common method "username" will map to the configured
-value of user_field (uid by default.) 
+value of user_field (uid by default.)
 
     $c->user->username == $c->user->uid
 
@@ -340,7 +357,7 @@ __END__
 Adam Jacob <holoway@cpan.org>
 
 Some parts stolen shamelessly and entirely from
-L<Catalyst::Plugin::Authentication::Store::Htpasswd>. 
+L<Catalyst::Plugin::Authentication::Store::Htpasswd>.
 
 Currently maintained by Peter Karman <karman@cpan.org>.
 

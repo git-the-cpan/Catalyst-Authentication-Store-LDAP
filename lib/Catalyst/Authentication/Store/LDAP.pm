@@ -3,7 +3,7 @@ package Catalyst::Authentication::Store::LDAP;
 use strict;
 use warnings;
 
-our $VERSION = '1.015';
+our $VERSION = '1.016';
 
 use Catalyst::Authentication::Store::LDAP::Backend;
 
@@ -19,9 +19,11 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
-Catalyst::Authentication::Store::LDAP 
+Catalyst::Authentication::Store::LDAP
   - Authentication from an LDAP Directory.
 
 =head1 SYNOPSIS
@@ -61,8 +63,12 @@ Catalyst::Authentication::Store::LDAP
                user_field          => "uid",
                user_filter         => "(&(objectClass=posixAccount)(uid=%s))",
                user_scope          => "one", # or "sub" for Active Directory
-               user_search_options => { deref => "always" },
+               user_search_options => {
+                 deref => 'always',
+                 attrs => [qw( distinguishedname name mail )],
+               },
                user_results_filter => sub { return shift->pop_entry },
+               persist_in_session  => 'all',
              },
            },
          },
@@ -73,8 +79,8 @@ Catalyst::Authentication::Store::LDAP
         my ( $self, $c ) = @_;
 
         $c->authenticate({
-                          id          => $c->req->param("login"), 
-                          password    => $c->req->param("password") 
+                          id          => $c->req->param("login"),
+                          password    => $c->req->param("password")
                          });
         $c->res->body("Welcome " . $c->user->username . "!");
     }
@@ -85,17 +91,17 @@ This plugin implements the L<Catalyst::Authentication> v.10 API. Read that docum
 you are upgrading from a previous version of this plugin.
 
 This plugin uses C<Net::LDAP> to let your application authenticate against
-an LDAP directory.  It has a pretty high degree of flexibility, given the 
-wide variation of LDAP directories and schemas from one system to another. 
+an LDAP directory.  It has a pretty high degree of flexibility, given the
+wide variation of LDAP directories and schemas from one system to another.
 
 It authenticates users in two steps:
 
 1) A search of the directory is performed, looking for a user object that
-   matches the username you pass.  This is done with the bind credentials 
+   matches the username you pass.  This is done with the bind credentials
    supplied in the "binddn" and "bindpw" configuration options.
 
 2) If that object is found, we then re-bind to the directory as that object.
-   Assuming this is successful, the user is Authenticated.  
+   Assuming this is successful, the user is Authenticated.
 
 =head1 CONFIGURATION OPTIONS
 
@@ -155,10 +161,10 @@ tweeks to the example configuration will work:
 
     user_basedn: ou=Domain Users,ou=Accounts,dc=mycompany,dc=com
     user_field:  samaccountname
-    user_filter: (sAMAccountName=%s) 
+    user_filter: (sAMAccountName=%s)
     user_scope: sub
 
-He also notes: "I found the case in the value of user_field to be significant: 
+He also notes: "I found the case in the value of user_field to be significant:
 it didn't seem to work when I had the mixed case value there."
 
 =head2 ldap_server
@@ -167,7 +173,7 @@ This should be the hostname of your LDAP server.
 
 =head2 ldap_server_options
 
-This should be a hashref containing options to pass to L<Net::LDAP>->new().  
+This should be a hashref containing options to pass to L<Net::LDAP>->new().
 See L<Net::LDAP> for the full list.
 
 =head2 binddn
@@ -198,7 +204,7 @@ top of your "users" branch; ie "ou=people,dc=yourcompany,dc=com".
 
 =head2 user_filter
 
-This is the LDAP Search filter used during user lookup.  The special string 
+This is the LDAP Search filter used during user lookup.  The special string
 '%s' will be replaced with the username you pass to $c->login.  By default
 it is set to '(uid=%s)'.  Other possibly useful filters:
 
@@ -255,10 +261,10 @@ Example:
                           }
                           return undef; # i.e., no match
                         }
- 
+
 =head2 use_roles
 
-Whether or not to enable role lookups.  It defaults to true; set it to 0 if 
+Whether or not to enable role lookups.  It defaults to true; set it to 0 if
 you want to always avoid role lookups.
 
 =head2 role_basedn
@@ -286,7 +292,7 @@ Should be set to the Attribute of the Role Object's returned during Role lookup 
 
 =head2 role_value
 
-This is the attribute of the User object we want to use in our role_filter. 
+This is the attribute of the User object we want to use in our role_filter.
 If this is set to "dn", we will use the User Objects DN.
 
 =head2 role_search_options
@@ -310,6 +316,28 @@ by binding to the directory with the details in the I<binddn> and I<bindpw>
 fields. If this is set to false, then the role search will instead be
 performed when bound as the user you authenticated as.
 
+=head2 persist_in_session
+
+Can take one of the following values, defaults to C<username>:
+
+=over
+
+=item C<username>
+
+Only store the username in the session and lookup the user and its roles
+on every request. That was how the module worked until version 1.015 and is
+also the default for backwards compatibility.
+
+=item C<all>
+
+Store the user object and its roles in the session and never look it up in
+the store after login.
+
+B<NOTE:> It's recommended to limit the user attributes fetched from LDAP
+using L<user_search_options> / attrs to not exhaust the session store.
+
+=back
+
 =head2 entry_class
 
 The name of the class of LDAP entries returned. This class should
@@ -325,16 +353,18 @@ L<Catalyst::Authentication::Store::LDAP::User>.
 =head2 new
 
 This method will populate
-L<Catalyst::Plugin::Authentication/default_auth_store> with this object. 
+L<Catalyst::Plugin::Authentication/default_auth_store> with this object.
 
 =head1 AUTHORS
 
 Adam Jacob <holoway@cpan.org>
+Peter Karman <karman@cpan.org>
+Alexander Hartmaier <abraxxa@cpan.org>
 
 Some parts stolen shamelessly and entirely from
 L<Catalyst::Plugin::Authentication::Store::Htpasswd>.
 
-Currently maintained by Peter Karman <karman@cpan.org>.
+Currently maintained by Dagfinn Ilmari Mannsåker <ilmari@cpan.org>.
 
 =head1 THANKS
 
@@ -345,7 +375,7 @@ To nothingmuch, ghenry, castaway and the rest of #catalyst for the help. :)
 L<Catalyst::Authentication::Store::LDAP>,
 L<Catalyst::Authentication::Store::LDAP::User>,
 L<Catalyst::Authentication::Store::LDAP::Backend>,
-L<Catalyst::Plugin::Authentication>, 
+L<Catalyst::Plugin::Authentication>,
 L<Net::LDAP>
 
 =head1 COPYRIGHT & LICENSE

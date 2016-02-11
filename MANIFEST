@@ -21,6 +21,7 @@ t/04-user_class.t
 t/05-user_attributes.t
 t/06-user_autoload.t
 t/10-roles-mock.t
+t/20-persist_in_session.t
 t/50.auth.case.sensitivity.t
 t/lib/EntryClass.pm
 t/lib/LDAPTest.pm
